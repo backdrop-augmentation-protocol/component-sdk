@@ -1,48 +1,40 @@
-const REQUEST = 'bap.component.request';
-const RESPONSE = 'bap.component.response';
-const EVENT = 'bap.component.event';
+import { BAP_PROTOCOL, createEvent, createRequest, isProtocolMessage } from './protocol.js';
+
+export class BapProtocolError extends Error {
+  constructor(error) {
+    super(error?.message || 'BAP protocol error');
+    this.name = 'BapProtocolError';
+    Object.assign(this, error);
+  }
+}
 
 export class PostMessageClient {
-  constructor({ target, targetOrigin = '*', receiveWindow = globalThis.window, timeoutMs = 5000 } = {}) {
+  constructor({ target, targetOrigin = '*', receiveWindow = globalThis.window, timeoutMs = 5000, sessionId } = {}) {
     if (!target || typeof target.postMessage !== 'function') throw new TypeError('target must support postMessage');
-    this.target = target;
-    this.targetOrigin = targetOrigin;
-    this.receiveWindow = receiveWindow;
-    this.timeoutMs = timeoutMs;
-    this.pending = new Map();
-    this.listeners = new Map();
-    this._id = 0;
-    this._onMessage = (event) => {
-      if (event.source && event.source !== this.target) return;
-      const message = event.data;
-      if (!message || message.channel !== 'bap' || message.protocol !== '0.1') return;
-      if (message.type === RESPONSE && this.pending.has(message.id)) {
-        const pending = this.pending.get(message.id);
-        this.pending.delete(message.id);
-        clearTimeout(pending.timer);
-        if (message.error) pending.reject(Object.assign(new Error(message.error.message), message.error));
-        else pending.resolve(message.result);
-      } else if (message.type === EVENT) {
-        for (const listener of this.listeners.get(message.name) || []) listener(message.payload, message);
-      }
-    };
+    this.target = target; this.targetOrigin = targetOrigin; this.receiveWindow = receiveWindow; this.timeoutMs = timeoutMs; this.sessionId = sessionId;
+    this.pending = new Map(); this.listeners = new Map(); this._onMessage = (event) => this._receive(event);
     this.receiveWindow?.addEventListener?.('message', this._onMessage);
   }
-
-  request(method, params) {
-    const id = `${Date.now().toString(36)}-${++this._id}`;
+  hello({ identity, capabilities = [], permissions = [], role = 'component' } = {}) {
+    return this.request('hello', { role, identity, protocolVersions: [BAP_PROTOCOL.version], capabilities, requestedPermissions: permissions });
+  }
+  request(method, payload = {}) {
+    const request = createRequest(method, payload, { sessionId: this.sessionId });
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => { this.pending.delete(id); reject(new Error(`BAP request timed out: ${method}`)); }, this.timeoutMs);
-      this.pending.set(id, { resolve, reject, timer });
-      this.target.postMessage({ channel: 'bap', protocol: '0.1', type: REQUEST, id, method, params }, this.targetOrigin);
+      const timer = setTimeout(() => { this.pending.delete(request.id); reject(new BapProtocolError({ code: 'TIMEOUT', message: `BAP request timed out: ${method}`, retryable: true })); }, this.timeoutMs);
+      this.pending.set(request.id, { resolve, reject, timer }); this.target.postMessage(request, this.targetOrigin);
     });
   }
-
-  notify(name, payload) { this.target.postMessage({ channel: 'bap', protocol: '0.1', type: EVENT, name, payload }, this.targetOrigin); }
-  on(name, listener) {
-    if (!this.listeners.has(name)) this.listeners.set(name, new Set());
-    this.listeners.get(name).add(listener);
-    return () => this.listeners.get(name)?.delete(listener);
+  notify(event, payload = {}, options = {}) { this.target.postMessage(createEvent(event, payload, { ...options, sessionId: options.sessionId || this.sessionId }), this.targetOrigin); }
+  on(event, listener) { if (!this.listeners.has(event)) this.listeners.set(event, new Set()); this.listeners.get(event).add(listener); return () => this.listeners.get(event)?.delete(listener); }
+  _receive(event) {
+    if (event.source && event.source !== this.target) return;
+    const message = event.data;
+    if (!isProtocolMessage(message) || (this.sessionId && message.sessionId && message.sessionId !== this.sessionId)) return;
+    if (message.kind === 'response' && message.correlationId && this.pending.has(message.correlationId)) {
+      const pending = this.pending.get(message.correlationId); this.pending.delete(message.correlationId); clearTimeout(pending.timer);
+      if (message.ok) pending.resolve(message.result); else pending.reject(new BapProtocolError(message.error));
+    } else if (message.kind === 'event') for (const listener of this.listeners.get(message.event) || []) listener(message.payload, message);
   }
-  close() { this.receiveWindow?.removeEventListener?.('message', this._onMessage); for (const pending of this.pending.values()) pending.reject(new Error('BAP client closed')); this.pending.clear(); }
+  close() { this.receiveWindow?.removeEventListener?.('message', this._onMessage); for (const pending of this.pending.values()) { clearTimeout(pending.timer); pending.reject(new BapProtocolError({ code: 'INTERNAL_ERROR', message: 'BAP client closed' })); } this.pending.clear(); }
 }
