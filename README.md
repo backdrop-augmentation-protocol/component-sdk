@@ -1,5 +1,7 @@
 # BAP Component SDK
 
+[English](README.md) | [简体中文](README.zh-CN.md)
+
 Official MVP SDK for building dual-mode BAP components. A component can run independently in Standalone Mode or inside a compatible host through an Embedded iframe.
 
 ## Quick start
