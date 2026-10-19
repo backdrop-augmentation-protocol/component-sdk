@@ -1,0 +1,3 @@
+import { StandaloneShell } from '../../src/index.js';
+const manifest = { manifestVersion: '0.1', id: 'example.clock', name: 'BAP Example Clock', version: '0.1.0', entry: { embedded: './component.js', standalone: './component.js' } };
+new StandaloneShell({ manifest, render(root, runtime) { const title = document.createElement('h1'); const time = document.createElement('time'); title.textContent = 'BAP Component SDK'; root.append(title, time); const tick = () => { time.textContent = new Date().toLocaleTimeString(); }; tick(); const timer = setInterval(tick, 1000); runtime.onLifecycle('stopped', () => clearInterval(timer)); } }).start();

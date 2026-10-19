@@ -1,0 +1,9 @@
+{
+  "manifestVersion": "0.1",
+  "id": "example.clock",
+  "name": "BAP Example Clock",
+  "version": "0.1.0",
+  "entry": { "embedded": "./component.js", "standalone": "./component.js" },
+  "capabilities": [],
+  "permissions": []
+}

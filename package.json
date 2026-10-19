@@ -1,0 +1,18 @@
+{
+  "name": "@bap/component-sdk",
+  "version": "0.1.0",
+  "description": "Official BAP Component SDK for dual-mode web components.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js",
+    "./manifest": "./src/manifest.js",
+    "./client": "./src/post-message-client.js",
+    "./runtime": "./src/runtime.js",
+    "./standalone-shell": "./src/standalone-shell.js"
+  },
+  "scripts": {
+    "test": "node --test",
+    "example": "node examples/minimal/serve.mjs"
+  },
+  "files": ["src", "examples", "README.md", "LICENSE"]
+}
