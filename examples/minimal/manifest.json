@@ -1,9 +1,11 @@
 {
-  "manifestVersion": "0.1",
+  "protocol": { "name": "bap", "version": "0.1.0", "profile": "core" },
   "id": "example.clock",
   "name": "BAP Example Clock",
   "version": "0.1.0",
-  "entry": { "embedded": "./component.js", "standalone": "./component.js" },
+  "role": "component",
+  "modes": ["standalone", "embedded"],
+  "entrypoints": { "default": "./component.js", "embedded": "./component.js", "standalone": "./component.js" },
   "capabilities": [],
   "permissions": []
 }
