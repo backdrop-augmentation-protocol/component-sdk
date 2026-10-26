@@ -59,7 +59,7 @@ export class ComponentRuntime {
     if (['initialize', 'start', 'pause', 'resume', 'stop'].includes(method)) throw this._invalidState(method);
     const error = new Error(`Unknown method: ${method}`); error.code = 'NOT_FOUND'; throw error;
   }
-  async _transition(state) { this.state = state; for (const listener of this.lifecycleListeners.get(state) || []) await listener({ state, runtime: this }); this.client?.notify('state.changed', { role: 'component', state, id: this.manifest.id }, { sessionId: this.sessionId }); }
+  async _transition(state) { this.state = state; for (const listener of this.lifecycleListeners.get(state) || []) await listener({ state, runtime: this }); if (state !== 'connected') this.client?.notify('state.changed', { role: 'component', state, id: this.manifest.id }, { sessionId: this.sessionId }); }
   getConfig(key) { return key === undefined ? this.config : this.config[key]; }
   async setConfig(patch) { if (!patch || typeof patch !== 'object' || Array.isArray(patch)) throw new TypeError('config patch must be an object'); this.config = { ...this.config, ...patch }; for (const listener of this.configListeners) await listener(this.config); this.client?.notify('config.changed', { scope: 'wallpaper', config: this.config }, { sessionId: this.sessionId }); return this.config; }
   onConfigChange(listener) { this.configListeners.add(listener); return () => this.configListeners.delete(listener); }

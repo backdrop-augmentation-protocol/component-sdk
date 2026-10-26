@@ -58,6 +58,7 @@ test('embedded runtime responds to Host hello and lifecycle without initiating r
     return response;
   };
   const hello = await dispatch('hello');
+  assert.equal(sent[0].kind, 'response');
   assert.equal(hello.result.role, 'component');
   const sessionId = hello.sessionId;
   await dispatch('initialize', sessionId);
