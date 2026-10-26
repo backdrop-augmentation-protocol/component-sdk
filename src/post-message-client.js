@@ -1,4 +1,4 @@
-import { BAP_PROTOCOL, createErrorResponse, createEvent, createRequest, createResponse, isProtocolMessage } from './protocol.js';
+import { createErrorResponse, createEvent, createRequest, createResponse, isProtocolMessage } from './protocol.js';
 
 export class BapProtocolError extends Error {
   constructor(error) {
@@ -14,9 +14,6 @@ export class PostMessageClient {
     this.target = target; this.targetOrigin = targetOrigin; this.receiveWindow = receiveWindow; this.timeoutMs = timeoutMs; this.sessionId = sessionId;
     this.pending = new Map(); this.listeners = new Map(); this.requestHandler = null; this.peerOrigin = null; this._onMessage = (event) => this._receive(event);
     this.receiveWindow?.addEventListener?.('message', this._onMessage);
-  }
-  hello({ identity, capabilities = [], permissions = [], role = 'component' } = {}) {
-    return this.request('hello', { role, identity, protocolVersions: [BAP_PROTOCOL.version], capabilities, requestedPermissions: permissions });
   }
   request(method, payload = {}) {
     const request = createRequest(method, payload, { sessionId: this.sessionId });

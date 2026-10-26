@@ -21,19 +21,19 @@ test('validates the formal dual-mode component manifest', () => {
   assert.equal(validateManifest({ ...manifest, modes: ['embedded'], entrypoints: { default: './component.js' } }).valid, false);
 });
 
-test('postMessage client uses hello/helloAck-compatible request/response envelopes', async () => {
+test('postMessage client correlates non-Core request/response envelopes', async () => {
   const sent = [];
   const receiveWindow = { addEventListener: (_name, listener) => { receiveWindow.listener = listener; }, removeEventListener() {} };
   const target = { postMessage(message) {
     sent.push(message);
-    const result = message.method === 'hello' ? { sessionId: 'session-test', protocol: BAP_PROTOCOL, grantedCapabilities: [], grantedPermissions: [] } : {};
+    const result = { acknowledged: true };
     queueMicrotask(() => receiveWindow.listener({ source: target, data: createResponse(message, result, { sessionId: 'session-test' }) }));
   } };
   const client = new PostMessageClient({ target, receiveWindow });
-  const result = await client.hello({ identity: { id: manifest.id, name: manifest.name, version: manifest.version } });
-  assert.equal(result.sessionId, 'session-test');
+  const result = await client.request('component.get-state');
+  assert.equal(result.acknowledged, true);
   assert.equal(sent[0].kind, 'request');
-  assert.equal(sent[0].method, 'hello');
+  assert.equal(sent[0].method, 'component.get-state');
   assert.deepEqual(sent[0].protocol, BAP_PROTOCOL);
   assert.ok(sent[0].timestamp);
   client.close();
