@@ -39,26 +39,36 @@ test('postMessage client uses hello/helloAck-compatible request/response envelop
   client.close();
 });
 
-test('embedded runtime completes handshake and lifecycle through the formal contract', async () => {
+test('embedded runtime responds to Host hello and lifecycle without initiating requests', async () => {
   const receiveWindow = { addEventListener: (_name, listener) => { receiveWindow.listener = listener; }, removeEventListener() {} };
-  const methods = [];
-  const target = { postMessage(message) {
-    methods.push(message.method);
-    const result = message.method === 'hello' ? { sessionId: 'session-runtime', protocol: BAP_PROTOCOL, grantedCapabilities: [], grantedPermissions: [] } : {};
-    queueMicrotask(() => receiveWindow.listener({ source: target, data: createResponse(message, result, { sessionId: 'session-runtime' }) }));
-  } };
+  const sent = [];
+  const target = { postMessage(message) { sent.push(message); } };
   const client = new PostMessageClient({ target, receiveWindow });
   const runtime = new ComponentRuntime({ manifest, mode: 'embedded', client, config: { color: 'cyan' } });
   const events = [];
   runtime.onLifecycle('initialized', ({ state }) => events.push(state));
   await runtime.start();
-  assert.deepEqual(methods.filter(Boolean), ['hello', 'initialize', 'start']);
+  assert.equal(sent.length, 0);
+  const dispatch = async (method, sessionId) => {
+    const request = { protocol: BAP_PROTOCOL, kind: 'request', id: `req-${method}`, timestamp: new Date().toISOString(), method, payload: method === 'hello' ? { role: 'host', identity: { id: 'example.host', name: 'Host', version: '0.1.0' }, protocolVersions: ['0.1.0'], capabilities: [], requestedPermissions: [] } : {}, ...(sessionId ? { sessionId } : {}) };
+    receiveWindow.listener({ source: target, origin: 'https://host.test', data: request });
+    await new Promise(resolve => setTimeout(resolve, 0));
+    const response = sent.find(message => message.kind === 'response' && message.correlationId === request.id);
+    assert.equal(response?.ok, true);
+    return response;
+  };
+  const hello = await dispatch('hello');
+  assert.equal(hello.result.role, 'component');
+  const sessionId = hello.sessionId;
+  await dispatch('initialize', sessionId);
+  await dispatch('start', sessionId);
   assert.deepEqual(events, ['initialized']);
   assert.equal(runtime.state, 'running');
-  await runtime.pause();
-  await runtime.resume();
-  await runtime.stop();
-  assert.deepEqual(methods.filter(Boolean), ['hello', 'initialize', 'start', 'pause', 'resume', 'stop']);
+  await dispatch('pause', sessionId);
+  await dispatch('resume', sessionId);
+  await dispatch('stop', sessionId);
+  assert.equal(runtime.state, 'stopped');
+  client.close();
 });
 
 test('standalone runtime remains usable without a host or companion', async () => {
