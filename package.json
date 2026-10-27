@@ -1,6 +1,7 @@
 {
   "name": "@backdrop-augmentation-protocol/component-sdk",
   "version": "0.1.0",
+  "license": "MIT",
   "description": "Official BAP Component SDK for dual-mode web components.",
   "publishConfig": { "access": "public" },
   "type": "module",
