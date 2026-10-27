@@ -73,6 +73,10 @@ test('embedded runtime responds to Host hello and lifecycle without initiating r
   await dispatch('resume', sessionId);
   await dispatch('stop', sessionId);
   assert.equal(runtime.state, 'stopped');
+  await dispatch('initialize', sessionId);
+  await dispatch('start', sessionId);
+  assert.deepEqual(events, ['initialized', 'initialized']);
+  assert.equal(runtime.state, 'running');
   client.close();
 });
 
