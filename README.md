@@ -10,8 +10,14 @@ Official MVP SDK for building dual-mode BAP components. A component can run inde
 import { StandaloneShell } from '@backdrop-augmentation-protocol/component-sdk';
 
 const manifest = {
-  manifestVersion: '0.1', id: 'example.clock', name: 'Example Clock', version: '0.1.0',
-  entry: { embedded: './component.js', standalone: './component.js' }
+  protocol: { name: 'bap', version: '0.1.0', profile: 'core' },
+  id: 'example.clock', name: 'Example Clock', version: '0.1.0',
+  role: 'component', capabilities: [], modes: ['standalone', 'embedded'],
+  entrypoints: {
+    default: './component.js',
+    embedded: './component.js',
+    standalone: './component.js'
+  }
 };
 
 new StandaloneShell({ manifest, render(root, runtime) {
