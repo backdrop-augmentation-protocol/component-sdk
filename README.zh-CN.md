@@ -8,7 +8,7 @@
 ## 快速开始
 
 ```js
-import { StandaloneShell } from '@bap/component-sdk';
+import { StandaloneShell } from '@backdrop-augmentation-protocol/component-sdk';
 
 const manifest = {
   manifestVersion: '0.1', id: 'example.clock', name: 'Example Clock', version: '0.1.0',

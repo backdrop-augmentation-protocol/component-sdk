@@ -7,7 +7,7 @@ Official MVP SDK for building dual-mode BAP components. A component can run inde
 ## Quick start
 
 ```js
-import { StandaloneShell } from '@bap/component-sdk';
+import { StandaloneShell } from '@backdrop-augmentation-protocol/component-sdk';
 
 const manifest = {
   manifestVersion: '0.1', id: 'example.clock', name: 'Example Clock', version: '0.1.0',
