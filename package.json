@@ -17,5 +17,5 @@
     "test": "node --test",
     "example": "node examples/minimal/serve.mjs"
   },
-  "files": ["src", "examples", "README.md", "LICENSE"]
+  "files": ["src", "examples", "README.md", "README.zh-CN.md", "LICENSE"]
 }
