@@ -49,12 +49,13 @@ test('embedded runtime responds to Host hello and lifecycle without initiating r
   runtime.onLifecycle('initialized', ({ state }) => events.push(state));
   await runtime.start();
   assert.equal(sent.length, 0);
-  const dispatch = async (method, sessionId) => {
-    const request = { protocol: BAP_PROTOCOL, kind: 'request', id: `req-${method}`, timestamp: new Date().toISOString(), method, payload: method === 'hello' ? { role: 'host', identity: { id: 'example.host', name: 'Host', version: '0.1.0' }, protocolVersions: ['0.1.0'], capabilities: [], requestedPermissions: [] } : {}, ...(sessionId ? { sessionId } : {}) };
+  let requestNumber = 0;
+  const dispatch = async (method, sessionId, expectedOk = true) => {
+    const request = { protocol: BAP_PROTOCOL, kind: 'request', id: `req-${method}-${++requestNumber}`, timestamp: new Date().toISOString(), method, payload: method === 'hello' ? { role: 'host', identity: { id: 'example.host', name: 'Host', version: '0.1.0' }, protocolVersions: ['0.1.0'], capabilities: [], requestedPermissions: [] } : {}, ...(sessionId ? { sessionId } : {}) };
     receiveWindow.listener({ source: target, origin: 'https://host.test', data: request });
     await new Promise(resolve => setTimeout(resolve, 0));
     const response = sent.find(message => message.kind === 'response' && message.correlationId === request.id);
-    assert.equal(response?.ok, true);
+    assert.equal(response?.ok, expectedOk);
     return response;
   };
   const hello = await dispatch('hello');
@@ -62,6 +63,9 @@ test('embedded runtime responds to Host hello and lifecycle without initiating r
   assert.equal(hello.result.role, 'component');
   const sessionId = hello.sessionId;
   await dispatch('initialize', sessionId);
+  const invalidStop = await dispatch('stop', sessionId, false);
+  assert.equal(invalidStop.error.code, 'INVALID_STATE');
+  assert.equal(runtime.state, 'initialized');
   await dispatch('start', sessionId);
   assert.deepEqual(events, ['initialized']);
   assert.equal(runtime.state, 'running');
@@ -74,6 +78,8 @@ test('embedded runtime responds to Host hello and lifecycle without initiating r
 
 test('standalone runtime remains usable without a host or companion', async () => {
   const runtime = new ComponentRuntime({ manifest, mode: 'standalone', config: { color: 'cyan' } });
+  const states = [];
+  for (const state of ['connected', 'initialized', 'running', 'stopped']) runtime.onLifecycle(state, () => states.push(state));
   await runtime.start();
   assert.equal(runtime.state, 'running');
   await runtime.setConfig({ size: 2 });
@@ -82,6 +88,9 @@ test('standalone runtime remains usable without a host or companion', async () =
   await runtime.resume();
   await runtime.stop();
   assert.equal(runtime.state, 'stopped');
+  await runtime.start();
+  assert.equal(runtime.state, 'running');
+  assert.deepEqual(states, ['connected', 'initialized', 'running', 'running', 'stopped', 'initialized', 'running']);
 });
 
 test('protocol errors preserve stable error codes', async () => {

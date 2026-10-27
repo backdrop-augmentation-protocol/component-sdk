@@ -22,12 +22,12 @@ export class ComponentRuntime {
     if (this.state === 'created') {
       this.sessionId = `standalone-${Date.now().toString(36)}`;
       await this._transition('connected'); await this._requestLifecycle('initialize'); await this._transition('initialized');
-    } else await this._requestLifecycle('initialize');
+    } else { await this._requestLifecycle('initialize'); await this._transition('initialized'); }
     await this._requestLifecycle('start'); await this._transition('running');
   }
   async pause() { if (this.state === 'paused') return; if (this.state !== 'running') throw this._invalidState('pause'); await this._requestLifecycle('pause'); await this._transition('paused'); }
   async resume() { if (this.state === 'paused') { await this._requestLifecycle('resume'); await this._transition('running'); } }
-  async stop() { if (this.state === 'stopped') return; if (!['initialized', 'running', 'paused'].includes(this.state)) throw this._invalidState('stop'); await this._requestLifecycle('stop'); await this._transition('stopped'); }
+  async stop() { if (this.state === 'stopped') return; if (!['running', 'paused'].includes(this.state)) throw this._invalidState('stop'); await this._requestLifecycle('stop'); await this._transition('stopped'); }
   async _requestLifecycle(method) { if (this.client) await this.client.request(method, { componentId: this.manifest.id, mode: this.mode }); }
   _invalidState(method) { const error = new Error(`Cannot ${method} from ${this.state}`); error.code = 'INVALID_STATE'; return error; }
   async _hostRequest(message) {
@@ -54,7 +54,7 @@ export class ComponentRuntime {
     if (method === 'start' && this.state === 'initialized') { await this._transition('running'); return { state: this.state }; }
     if (method === 'pause' && this.state === 'running') { await this._transition('paused'); return { state: this.state }; }
     if (method === 'resume' && this.state === 'paused') { await this._transition('running'); return { state: this.state }; }
-    if (method === 'stop' && ['initialized', 'running', 'paused'].includes(this.state)) { await this._transition('stopped'); return { state: this.state }; }
+    if (method === 'stop' && ['running', 'paused'].includes(this.state)) { await this._transition('stopped'); return { state: this.state }; }
     if ((method === 'pause' && this.state === 'paused') || (method === 'resume' && this.state === 'running') || (method === 'stop' && this.state === 'stopped')) return { state: this.state };
     if (['initialize', 'start', 'pause', 'resume', 'stop'].includes(method)) throw this._invalidState(method);
     const error = new Error(`Unknown method: ${method}`); error.code = 'NOT_FOUND'; throw error;
