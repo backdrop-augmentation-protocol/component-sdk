@@ -151,6 +151,26 @@ test('rejects duplicate Host extension IDs instead of selecting ambiguous versio
   client.close();
 });
 
+test('captures the instance routing ID when only the component-config extension is selected', async () => {
+  const receiveWindow = { addEventListener: (_name, listener) => { receiveWindow.listener = listener; }, removeEventListener() {} };
+  const sent = []; const target = { postMessage(message) { sent.push(message); } };
+  const client = new PostMessageClient({ target, receiveWindow });
+  const runtime = new ComponentRuntime({ manifest, mode: 'embedded', client,
+    extensions: [{ id: 'org.bap.component-config', versions: ['0.1.0'] }] });
+  await runtime.start();
+  const helloRequest = {
+    protocol: BAP_PROTOCOL, kind: 'request', id: 'hello-config', timestamp: new Date().toISOString(), method: 'hello',
+    payload: { role: 'host', identity: { id: 'example.host', name: 'Host', version: '0.2.0' }, protocolVersions: ['0.1.0'], capabilities: [], requestedPermissions: [], instanceId: 'clock-instance',
+      extensions: [{ id: 'org.bap.component-config', versions: ['0.1.0'] }] }
+  };
+  receiveWindow.listener({ source: target, origin: 'https://host.test', data: helloRequest });
+  await new Promise(resolve => setTimeout(resolve, 0));
+  const response = sent.find(message => message.correlationId === helloRequest.id);
+  assert.equal(response.ok, true);
+  assert.equal(runtime.instanceId, 'clock-instance');
+  client.close();
+});
+
 test('standalone runtime remains usable without a host or companion', async () => {
   const runtime = new ComponentRuntime({ manifest, mode: 'standalone', config: { color: 'cyan' } });
   const states = [];
