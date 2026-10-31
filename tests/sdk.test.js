@@ -61,6 +61,7 @@ test('embedded runtime responds to Host hello and lifecycle without initiating r
   const hello = await dispatch('hello');
   assert.equal(sent[0].kind, 'response');
   assert.equal(hello.result.role, 'component');
+  assert.equal('selectedExtensions' in hello.result, false);
   const sessionId = hello.sessionId;
   await dispatch('initialize', sessionId);
   const invalidStop = await dispatch('stop', sessionId, false);
@@ -77,6 +78,76 @@ test('embedded runtime responds to Host hello and lifecycle without initiating r
   await dispatch('start', sessionId);
   assert.deepEqual(events, ['initialized', 'initialized']);
   assert.equal(runtime.state, 'running');
+  client.close();
+});
+
+test('negotiates exact extensions and applies only fresh events for the active component instance', async () => {
+  const receiveWindow = { addEventListener: (_name, listener) => { receiveWindow.listener = listener; }, removeEventListener() {} };
+  const sent = [];
+  const target = { postMessage(message) { sent.push(message); } };
+  const client = new PostMessageClient({ target, receiveWindow });
+  const runtime = new ComponentRuntime({
+    manifest, mode: 'embedded', client, config: { theme: 'old' },
+    extensions: [
+      { id: 'org.bap.composition', versions: ['0.1.0'] },
+      { id: 'org.bap.component-config', versions: ['0.1.0'] },
+      { id: 'org.bap.presentation', versions: ['0.1.0'] }
+    ]
+  });
+  const configChanges = []; const presentationChanges = [];
+  runtime.onConfigChange(value => configChanges.push(value));
+  runtime.onPresentationChange(value => presentationChanges.push(value));
+  const helloRequest = { protocol: BAP_PROTOCOL, kind: 'request', id: 'hello-extended', timestamp: new Date().toISOString(), method: 'hello', payload: {
+    role: 'host', identity: { id: 'example.host', name: 'Host', version: '0.2.0' }, protocolVersions: ['0.1.0'], capabilities: [], requestedPermissions: [], instanceId: 'clock-left',
+    extensions: [
+      { id: 'org.bap.composition', versions: ['0.2.0', '0.1.0'] },
+      { id: 'org.bap.component-config', versions: ['0.1.0'] },
+      { id: 'org.bap.presentation', versions: ['0.1.0'] },
+      { id: 'org.bap.unknown', versions: ['9.9.9'] }
+    ]
+  } };
+  receiveWindow.listener({ source: target, origin: 'https://host.test', data: helloRequest });
+  await new Promise(resolve => setTimeout(resolve, 0));
+  const helloAck = sent.find(message => message.correlationId === helloRequest.id);
+  assert.deepEqual(helloAck.result.selectedExtensions, [
+    { id: 'org.bap.composition', version: '0.1.0' },
+    { id: 'org.bap.component-config', version: '0.1.0' },
+    { id: 'org.bap.presentation', version: '0.1.0' }
+  ]);
+  assert.equal(runtime.instanceId, 'clock-left');
+
+  const sendEvent = (name, payload) => receiveWindow.listener({ source: target, origin: 'https://host.test', data: {
+    protocol: BAP_PROTOCOL, kind: 'event', id: `evt-${name}-${Math.random()}`, timestamp: new Date().toISOString(), sessionId: helloAck.sessionId, event: name, payload
+  } });
+  sendEvent('component.config.changed', { instanceId: 'clock-left', revision: 2, config: { theme: 'blue' } });
+  sendEvent('component.config.changed', { instanceId: 'clock-left', revision: 1, config: { theme: 'stale' } });
+  sendEvent('component.config.changed', { instanceId: 'clock-right', revision: 3, config: { theme: 'other-instance' } });
+  assert.deepEqual(runtime.getConfig(), { theme: 'blue' });
+  assert.deepEqual(configChanges, [{ theme: 'blue' }]);
+
+  sendEvent('presentation.visibility.changed', { instanceId: 'clock-left', visible: false });
+  sendEvent('presentation.scene.changed', { instanceId: 'clock-left', sceneId: 'lock-screen', revision: 4, reason: 'scene-transition' });
+  sendEvent('presentation.scene.changed', { instanceId: 'clock-left', sceneId: 'stale-scene', revision: 3 });
+  sendEvent('presentation.visibility.changed', { instanceId: 'clock-right', visible: true });
+  assert.equal(runtime.presentation.visible, false);
+  assert.equal(runtime.presentation.sceneId, 'lock-screen');
+  assert.equal(runtime.presentation.sceneRevision, 4);
+  assert.equal(presentationChanges.length, 2);
+  client.close();
+});
+
+test('rejects duplicate Host extension IDs instead of selecting ambiguous versions', async () => {
+  const receiveWindow = { addEventListener: (_name, listener) => { receiveWindow.listener = listener; }, removeEventListener() {} };
+  const sent = []; const target = { postMessage(message) { sent.push(message); } };
+  const client = new PostMessageClient({ target, receiveWindow });
+  const runtime = new ComponentRuntime({ manifest, mode: 'embedded', client, extensions: [{ id: 'org.bap.presentation', versions: ['0.1.0'] }] });
+  const request = { protocol: BAP_PROTOCOL, kind: 'request', id: 'bad-hello', timestamp: new Date().toISOString(), method: 'hello', payload: {
+    role: 'host', identity: { id: 'example.host', name: 'Host', version: '0.2.0' }, protocolVersions: ['0.1.0'], capabilities: [], requestedPermissions: [],
+    extensions: [{ id: 'org.bap.presentation', versions: ['0.1.0'] }, { id: 'org.bap.presentation', versions: ['0.2.0'] }]
+  } };
+  receiveWindow.listener({ source: target, origin: 'https://host.test', data: request });
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(sent.find(message => message.correlationId === request.id)?.error.code, 'INVALID_MESSAGE');
   client.close();
 });
 

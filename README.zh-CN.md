@@ -38,5 +38,22 @@ new StandaloneShell({ manifest, render(root, runtime) {
 - `PostMessageClient`：通过 `postMessage` 实现请求/响应和事件通信；
 - `ComponentRuntime`：生命周期（`start`、`pause`、`resume`、`stop`）和配置 API。
 
+### 草案 0.2.0 扩展支持
+
+嵌入式组件可以显式声明支持的草案扩展。只有 Host 与 Component 版本完全匹配时才会协商选中；仍兼容仅支持 Core 的 Host。
+
+```js
+const entry = createEmbeddedEntry({ manifest, extensions: [
+  { id: 'org.bap.composition', versions: ['0.1.0'] },
+  { id: 'org.bap.component-config', versions: ['0.1.0'] },
+  { id: 'org.bap.presentation', versions: ['0.1.0'] }
+] });
+
+entry.runtime.onConfigChange(config => renderConfig(config));
+entry.runtime.onPresentationChange(state => setVisible(state.visible, state.sceneId));
+```
+
+选中 composition 后，`runtime.instanceId` 是 Host 提供的不透明路由上下文，不代表身份认证或来源证明。Host 配置事件仅在实例 ID 匹配且修订号更新时替换完整有效快照。呈现事件同样按实例隔离。
+
 使用 `npm test` 运行测试。使用 `npm run example` 运行最小示例，然后打开
 `http://localhost:4173`。
