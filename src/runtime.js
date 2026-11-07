@@ -54,7 +54,7 @@ export class ComponentRuntime {
       }
       const offered = validateHostExtensionOffers(payload.extensions ?? []);
       const selectedExtensions = negotiateExtensions(offered, this.extensionOffers);
-      if (selectedExtensions.some(extension => extension.id === 'org.bap.composition' || extension.id === 'org.bap.component-config')) {
+      if (selectedExtensions.some(extension => ['org.bap.composition', 'org.bap.component-config', 'org.bap.presentation'].includes(extension.id))) {
         if (typeof payload.instanceId !== 'string' || !payload.instanceId.trim()) {
           const error = new Error('Composition handshake requires an instanceId'); error.code = 'INVALID_MESSAGE'; throw error;
         }
