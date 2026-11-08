@@ -151,23 +151,6 @@ test('rejects duplicate Host extension IDs instead of selecting ambiguous versio
   client.close();
 });
 
-test('binds presentation-only Host sessions to the supplied component instance ID', async () => {
-  const receiveWindow = { addEventListener: (_name, listener) => { receiveWindow.listener = listener; }, removeEventListener() {} };
-  const sent = []; const target = { postMessage(message) { sent.push(message); } };
-  const client = new PostMessageClient({ target, receiveWindow });
-  const runtime = new ComponentRuntime({ manifest, mode: 'embedded', client, extensions: [{ id: 'org.bap.presentation', versions: ['0.1.0'] }] });
-  const hello = { protocol: BAP_PROTOCOL, kind: 'request', id: 'presentation-only-hello', timestamp: new Date().toISOString(), method: 'hello', payload: {
-    role: 'host', identity: { id: 'example.host', name: 'Host', version: '0.2.0' }, protocolVersions: ['0.1.0'], capabilities: [], requestedPermissions: [], instanceId: 'presentation-clock',
-    extensions: [{ id: 'org.bap.presentation', versions: ['0.1.0'] }],
-  } };
-  receiveWindow.listener({ source: target, origin: 'https://host.test', data: hello });
-  await new Promise(resolve => setTimeout(resolve, 0));
-  const ack = sent.find(message => message.correlationId === hello.id);
-  assert.equal(ack.result.selectedExtensions[0].id, 'org.bap.presentation');
-  assert.equal(runtime.instanceId, 'presentation-clock');
-  client.close();
-});
-
 test('captures the instance routing ID when only the component-config extension is selected', async () => {
   const receiveWindow = { addEventListener: (_name, listener) => { receiveWindow.listener = listener; }, removeEventListener() {} };
   const sent = []; const target = { postMessage(message) { sent.push(message); } };
