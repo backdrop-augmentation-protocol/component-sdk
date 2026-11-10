@@ -2,7 +2,7 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-Official MVP SDK for building dual-mode BAP components. A component can run independently in Standalone Mode or inside a compatible host through an Embedded iframe.
+Official SDK version 0.2.0 for building dual-mode BAP components. It implements Core 0.1.0 and supports the versioned composition, configuration, and presentation extensions. A component can run independently in Standalone Mode or inside a compatible host through an Embedded iframe.
 
 ## Quick start
 
@@ -36,9 +36,9 @@ The official Standalone Shell is an optional convenience. The protocol only requ
 - `PostMessageClient`: request/response and event messaging over `postMessage`.
 - `ComponentRuntime`: lifecycle (`start`, `pause`, `resume`, `stop`) and configuration APIs.
 
-### Draft 0.2.0 extension support
+### BAP 0.2.0 extension support
 
-Embedded components may explicitly offer draft extensions. Only exact Host/Component version intersections are selected; Core-only Hosts remain supported.
+Embedded components may explicitly offer optional extensions. Only exact Host/Component version intersections are selected; Core-only Hosts remain supported.
 
 ```js
 const entry = createEmbeddedEntry({ manifest, extensions: [

@@ -2,7 +2,8 @@
 
 [English](README.md) | 简体中文
 
-用于构建 BAP 双模式组件的官方 MVP SDK。组件可以在 Standalone Mode 中独立
+用于构建 BAP 双模式组件的官方 SDK 0.2.0，实现 Core 0.1.0 并支持版本化的
+组合、配置和呈现扩展。组件可以在 Standalone Mode 中独立
 运行，也可以通过 Embedded iframe 运行在兼容 Host 中。
 
 ## 快速开始
@@ -38,9 +39,9 @@ new StandaloneShell({ manifest, render(root, runtime) {
 - `PostMessageClient`：通过 `postMessage` 实现请求/响应和事件通信；
 - `ComponentRuntime`：生命周期（`start`、`pause`、`resume`、`stop`）和配置 API。
 
-### 草案 0.2.0 扩展支持
+### BAP 0.2.0 扩展支持
 
-嵌入式组件可以显式声明支持的草案扩展。只有 Host 与 Component 版本完全匹配时才会协商选中；仍兼容仅支持 Core 的 Host。
+嵌入式组件可以显式声明支持的可选扩展。只有 Host 与 Component 版本完全匹配时才会协商选中；仍兼容仅支持 Core 的 Host。
 
 ```js
 const entry = createEmbeddedEntry({ manifest, extensions: [
