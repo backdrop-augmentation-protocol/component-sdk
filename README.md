@@ -48,7 +48,7 @@ const entry = createEmbeddedEntry({ manifest, extensions: [
 ] });
 
 entry.runtime.onConfigChange(config => renderConfig(config));
-entry.runtime.onPresentationChange(state => setVisible(state.visible, state.sceneId));
+entry.runtime.onPresentationChange(state => setVisible(state.visible));
 ```
 
 When composition is selected, `runtime.instanceId` is the Host-provided opaque routing context. It is not an authentication or origin claim. Host configuration events replace the complete effective snapshot only when their instance ID matches and their revision is newer. Presentation events are likewise instance-scoped.

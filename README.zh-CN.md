@@ -50,7 +50,7 @@ const entry = createEmbeddedEntry({ manifest, extensions: [
 ] });
 
 entry.runtime.onConfigChange(config => renderConfig(config));
-entry.runtime.onPresentationChange(state => setVisible(state.visible, state.sceneId));
+entry.runtime.onPresentationChange(state => setVisible(state.visible));
 ```
 
 选中 composition 后，`runtime.instanceId` 是 Host 提供的不透明路由上下文，不代表身份认证或来源证明。Host 配置事件仅在实例 ID 匹配且修订号更新时替换完整有效快照。呈现事件同样按实例隔离。

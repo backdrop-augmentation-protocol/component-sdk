@@ -3,7 +3,7 @@ export interface ComponentManifest { protocol: { name: 'bap'; version: string; p
 export interface ManifestResult { valid: boolean; errors: string[]; }
 export interface ExtensionOffer { id: string; versions: string[]; }
 export interface SelectedExtension { id: string; version: string; }
-export interface PresentationState { visible: boolean; sceneId: string | null; sceneRevision: number; reason?: string; }
+export interface PresentationState { visible: boolean; }
 export declare function validateManifest(value: unknown): ManifestResult;
 export declare function assertManifest(manifest: unknown): ComponentManifest;
 export declare class ManifestValidationError extends Error { errors: string[]; }

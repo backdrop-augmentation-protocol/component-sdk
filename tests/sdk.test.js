@@ -127,12 +127,10 @@ test('negotiates exact extensions and applies only fresh events for the active c
 
   sendEvent('presentation.visibility.changed', { instanceId: 'clock-left', visible: false });
   sendEvent('presentation.scene.changed', { instanceId: 'clock-left', sceneId: 'lock-screen', revision: 4, reason: 'scene-transition' });
-  sendEvent('presentation.scene.changed', { instanceId: 'clock-left', sceneId: 'stale-scene', revision: 3 });
   sendEvent('presentation.visibility.changed', { instanceId: 'clock-right', visible: true });
   assert.equal(runtime.presentation.visible, false);
-  assert.equal(runtime.presentation.sceneId, 'lock-screen');
-  assert.equal(runtime.presentation.sceneRevision, 4);
-  assert.equal(presentationChanges.length, 2);
+  assert.deepEqual(runtime.presentation, { visible: false });
+  assert.equal(presentationChanges.length, 1);
   client.close();
 });
 

@@ -9,14 +9,13 @@ export class ComponentRuntime {
     validateExtensionOffers(extensions);
     this.manifest = manifest; this.mode = mode; this.client = client; this.root = root; this.extensionOffers = clone(extensions);
     this.state = 'created'; this.sessionId = null; this.instanceId = null; this.selectedExtensions = []; this.config = clone(config); this.configRevision = -1; this.configListeners = new Set();
-    this.presentation = { visible: true, sceneId: null, sceneRevision: -1 };
+    this.presentation = { visible: true };
     this.presentationListeners = new Set();
     this.lifecycleListeners = new Map();
     if (this.mode === 'embedded' && this.client) {
       this.client.onRequest((message) => this._hostRequest(message));
       this.client.on('component.config.changed', payload => this._hostConfigChanged(payload));
       this.client.on('presentation.visibility.changed', payload => this._visibilityChanged(payload));
-      this.client.on('presentation.scene.changed', payload => this._sceneChanged(payload));
     }
   }
   onLifecycle(state, listener) { if (!this.lifecycleListeners.has(state)) this.lifecycleListeners.set(state, new Set()); this.lifecycleListeners.get(state).add(listener); return () => this.lifecycleListeners.get(state)?.delete(listener); }
@@ -91,11 +90,6 @@ export class ComponentRuntime {
     if (!this._hasExtension('org.bap.presentation') || !this._matchesInstance(payload) || typeof payload.visible !== 'boolean') return;
     if (payload.visible === this.presentation.visible) return;
     this.presentation = { ...this.presentation, visible: payload.visible };
-    this._notifyPresentation();
-  }
-  _sceneChanged(payload) {
-    if (!this._hasExtension('org.bap.presentation') || !this._matchesInstance(payload) || typeof payload.sceneId !== 'string' || !payload.sceneId.trim() || !Number.isSafeInteger(payload.revision) || payload.revision < 0 || payload.revision <= this.presentation.sceneRevision) return;
-    this.presentation = { ...this.presentation, sceneId: payload.sceneId, sceneRevision: payload.revision, ...(typeof payload.reason === 'string' ? { reason: payload.reason } : {}) };
     this._notifyPresentation();
   }
   _matchesInstance(payload) { return !!payload && typeof payload === 'object' && typeof this.instanceId === 'string' && payload.instanceId === this.instanceId; }
